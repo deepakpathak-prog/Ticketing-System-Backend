@@ -14,11 +14,12 @@ require("dotenv").config();
 
 const key = process.env.SECRET_KEY;
 
-// const { connect } = require('./config/database');
+const { connect } = require('./config/database');
 const Customer_Table = require("./models/CustomerTable");
 const NewTicket = require("./models/NewTicket");
+const Comments = require("./models/Comments")
 const { password } = require("pg/lib/defaults");
-// const {syncModels} =  require('./models/index')
+const {syncModels} =  require('./models/index')
 
 // const dummyDetails = async () => {
 //   try {
@@ -63,6 +64,7 @@ const { password } = require("pg/lib/defaults");
 
 const app = express();
 const port = 8000;
+
 
 app.use(express.json());
 app.use(cors());
@@ -138,11 +140,7 @@ app.post("/login", async (req, res) => {
       console.log("incorrect password");
     }
 
-    // const isMatch = await bcrypt.compare(password, user.password);
-
-    // if (!isMatch) {
-    //   return res.status(401).json({ message: "Incorrect password" });
-    // }
+    
   } catch (error) {
     console.error("Error logging in:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -378,7 +376,7 @@ app.get("/viewAllTickets", authMiddleware, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     } else {
-      // res.json({user});
+      
       const tickets = await NewTicket.findAll({
         where: {
           organization_id: user.organization_id,
@@ -654,6 +652,58 @@ app.get("/deleteTicket/:id", authMiddleware, async (req, res) => {
   } catch (error) {
     
   }
+})
+
+
+
+app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
+  const user_id = req.userId;
+  const ticketId = req.params.id;
+
+  try {
+    const user = await Customer_Table.findByPk(user_id);
+    const ticketDetails = await NewTicket.findByPk(ticketId);
+
+    const fileUploadPromises = req.files.map((file) => {
+      return new Promise((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream({ resource_type: "auto" }, (error, result) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(result.secure_url);
+            }
+          })
+          .end(file.buffer);
+      });
+    });
+    const fileUrls = await Promise.all(fileUploadPromises);
+
+    let updatedImagesUrls;
+    if (ticketDetails.details_images_url && Array.isArray(ticketDetails.details_images_url)) {
+      ticketDetails.details_images_url = ticketDetails.details_images_url.concat(fileUrls);
+    } else {
+      ticketDetails.details_images_url = fileUrls;
+    }
+
+
+    await ticketDetails.save();
+
+    const addingCommentDetails = await Comments.create({
+        user_id: user.user_id,
+        ticket_id: ticketId,
+        organization_id: user.organization_id,
+        company_legal_name: user.company_legal_name,
+        comment_by: user.customer_name,
+        comment_description: req.body.comment_description,
+    })
+
+    res.json({user, ticketDetails, addingCommentDetails});
+  } catch (error) {
+    console.error('Error adding comment:', error); 
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+
 })
 
 
