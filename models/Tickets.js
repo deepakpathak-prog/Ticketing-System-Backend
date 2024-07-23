@@ -1,8 +1,7 @@
 const { Sequelize, DataTypes } = require("sequelize");
 const { sequelize } = require('../config/database');
-
-
-const NewTicket = sequelize.define("NewTicket", {
+const { v4: uuidv4 } = require('uuid');
+const Tickets = sequelize.define("Tickets", {
   id: {
     allowNull: true,
     autoIncrement: true,
@@ -10,12 +9,14 @@ const NewTicket = sequelize.define("NewTicket", {
     type: DataTypes.INTEGER,
   },
   user_id: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
+    type: DataTypes.UUID,
+    defaultValue: uuidv4,
+    allowNull: false,
   },
   organization_id: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
+    type: DataTypes.UUID,
+    defaultValue: uuidv4,
+    allowNull: false,
   },
   company_legal_name: {
     type: DataTypes.STRING,
@@ -50,7 +51,4 @@ const NewTicket = sequelize.define("NewTicket", {
     allowNull: true,
   },
 });
-
-module.exports = NewTicket;
-
-
+module.exports = Tickets;

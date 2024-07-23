@@ -2,7 +2,9 @@ const { Sequelize, DataTypes } = require("sequelize");
 const { sequelize } = require('../config/database');
 const {v4: uuidv4} = require('uuid');
 
-const Comments = sequelize.define("Comments", {
+
+
+const Events = sequelize.define("Events", {
   id: {
     allowNull: false,
     autoIncrement: true,
@@ -27,16 +29,16 @@ const Comments = sequelize.define("Comments", {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  comment_by: {
+  event_by: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  comment_description: {
+  event_details: {
     type: DataTypes.TEXT,
     allowNull: false,
   }
 });
 
-module.exports = Comments;
+module.exports = Events;
 
 

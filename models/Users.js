@@ -1,9 +1,7 @@
 const { Sequelize, DataTypes } = require("sequelize");
 const { sequelize } = require('../config/database');
-
-
-const Customer_Table = sequelize.define("Customer_Table", {
-  
+const { v4: uuidv4 } = require('uuid');
+const Users = sequelize.define("Users", {
   id: {
     allowNull: true,
     autoIncrement: true,
@@ -11,15 +9,33 @@ const Customer_Table = sequelize.define("Customer_Table", {
     type: DataTypes.INTEGER,
   },
   user_id: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
+    type: DataTypes.UUID,
+    defaultValue: uuidv4,
+    allowNull: false,
   },
   organization_id: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
+    type: DataTypes.UUID,
+    defaultValue: uuidv4,
+    allowNull: false,
   },
   customer_name: {
     type: DataTypes.STRING,
+    allowNull: true,
+  },
+  gender: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  profile_url: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  role: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  onBoarded: {
+    type: DataTypes.BOOLEAN,
     allowNull: true,
   },
   company_legal_name: {
@@ -30,7 +46,7 @@ const Customer_Table = sequelize.define("Customer_Table", {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  area_of_work: {
+  designation: {
     type: DataTypes.STRING,
     allowNull: true,
   },
@@ -71,30 +87,5 @@ const Customer_Table = sequelize.define("Customer_Table", {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  profile_url: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  role: {
-    type: DataTypes.STRING,
-    allowNull: true,
-  },
-  onBoarded: {
-    type: DataTypes.BOOLEAN,
-    allowNull: true,
-  },
-  created_at: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    defaultValue: Sequelize.NOW,
-  },
-  updated_at: {
-    type: DataTypes.DATE,
-    allowNull: true,
-    defaultValue: Sequelize.NOW,
-  },
 });
-
-module.exports = Customer_Table;
-
-
+module.exports = Users;
