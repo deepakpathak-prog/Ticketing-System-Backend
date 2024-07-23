@@ -731,6 +731,19 @@ app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
 });
 
 // Super Admin APIs below:
+
+
+app.get("/SuperAdminAllTickets", authMiddleware, async (req, res) => {
+  try {
+    const user = await Tickets.findAll();
+    res.json({ user });
+    console.log(user);
+  } catch (error) {
+    es.status(500).json({ message: "Failed to filter tickets" });
+  }
+});
+
+
 app.get("/viewAllClients", async (req, res) => {
   try {
     const clients = await Users.findAll({
