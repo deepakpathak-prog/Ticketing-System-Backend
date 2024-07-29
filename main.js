@@ -292,10 +292,8 @@ app.post("/resetPassword", authMiddleware, async (req, res) => {
         password: newPassword,
       });
 
-      res.json({ message: "Password updated successfully", updatedUser });
-    } else {
-      console.log("error updating password");
-    }
+      res.json({ message: "Password updated successfully", updatePassword });
+    } 
   } catch (error) {
     console.error("Error resetting password:", error);
     res.status(500).json({ message: "Internal server error" });
