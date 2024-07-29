@@ -187,8 +187,10 @@ app.put(
     console.log("req", req.files);
 
     try {
-      const user = await Users.findByPk(userId);
-
+      const user = await Users.findOne({where: {
+        user_id: userId
+      }});
+  
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -217,9 +219,11 @@ app.put(
 
       const findUser = await Users.findOne({
         where: {
-          user_id: user.organization_id,
+          user_id: userId,
         },
       });
+
+      console.log("found user", findUser);
 
       // Update the found user record
       await findUser.update({
@@ -250,17 +254,24 @@ app.put(
 );
 
 app.get("/getUserDetails", authMiddleware, async (req, res) => {
-  const userId = req.userId;
+  let userId = req.userId
+
+  console.log(userId);
 
   try {
-    const user = await Users.findByPk(userId);
+    const user = await Users.findOne({where: {
+      user_id: userId
+    }});
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     } else {
       res.json({ user });
     }
-  } catch (error) {}
+  } catch (error) {
+    console.error("error fetching user", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
 app.post("/resetPassword", authMiddleware, async (req, res) => {
@@ -268,7 +279,9 @@ app.post("/resetPassword", authMiddleware, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
   try {
-    const user = await Users.findByPk(userId);
+    const user = await Users.findOne({where: {
+      user_id: userId
+    }});
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -324,7 +337,9 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
   const userId = req.userId;
 
   try {
-    const user = await Users.findByPk(userId);
+    const user = await Users.findOne({where: {
+      user_id: userId
+    }});
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -369,7 +384,9 @@ app.get("/viewAllTickets", authMiddleware, async (req, res) => {
   const userId = req.userId;
 
   try {
-    const user = await Users.findByPk(userId);
+    const user = await Users.findOne({where: {
+      user_id: userId
+    }});
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -393,8 +410,9 @@ app.get("/viewTicketDetails/:id", authMiddleware, async (req, res) => {
   const ticketId = req.params.id;
 
   try {
-    const user = await Users.findByPk(userId);
-
+    const user = await Users.findOne({where: {
+      user_id: userId
+    }});
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     } else {
@@ -457,7 +475,9 @@ app.put(
     const userId = req.userId;
     const ticketId = req.params.id;
     try {
-      const user = await Users.findByPk(userId);
+      const user = await Users.findOne({where: {
+        user_id: userId
+      }});
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -669,11 +689,13 @@ app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
 });
 
 app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
-  const user_id = req.userId;
+  const userId = req.userId;
   const ticketId = req.params.id;
 
   try {
-    const user = await Users.findByPk(user_id);
+    const user = await Users.findOne({where: {
+      user_id: userId
+    }});
     const ticketDetails = await Tickets.findByPk(ticketId);
 
     const fileUploadPromises = req.files.map((file) => {
@@ -715,7 +737,7 @@ app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
 
     // create event after someone comments on the ticket
     const createEvent = await Events.create({
-      user_id: user_id,
+      user_id: userId,
       ticket_id: ticketId,
       organization_id: user.organization_id,
       company_legal_name: user.company_legal_name,
@@ -729,6 +751,23 @@ app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
     res.status(500).json({ error: "Failed to add comment" });
   }
 });
+
+app.get("/getEventDetails/:id", authMiddleware, async (req, res) => {
+  const ticketId = req.params.id; 
+
+  try {
+    const event = await Events.findAll({
+      where: {
+        ticket_id: ticketId,
+      }
+    })
+
+    res.json({event});
+  } catch (error) {
+    console.error("cannot find events:", error);
+    res.status(500).json({ error: "Failed to find events" });
+  }
+})
 
 // Super Admin APIs below:
 
