@@ -18,6 +18,10 @@ const Tickets = sequelize.define("Tickets", {
     defaultValue: uuidv4,
     allowNull: false,
   },
+  customer_name: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   company_legal_name: {
     type: DataTypes.STRING,
     allowNull: true,

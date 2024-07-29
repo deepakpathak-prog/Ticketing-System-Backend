@@ -341,6 +341,8 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
       user_id: userId
     }});
 
+    const customer_name = user.customer_name
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     } else {
@@ -362,6 +364,7 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
 
       const Ticket = await Tickets.create({
         user_id: user.user_id,
+        customer_name: customer_name,
         organization_id: user.organization_id,
         company_legal_name: user.company_legal_name,
         ticket_type: req.body.ticket_type,

@@ -11,8 +11,8 @@ const Mapping = require("./Mapping")
 
 const syncModels = async () => {
   try {
-    await Events.sync();
-    console.log('Users model was synchronized successfully.');
+    await Tickets.sync();
+    console.log('Tickets model was synchronized successfully.');
   } catch (error) {
     console.error('An error occurred while synchronizing the models:', error);
   }
