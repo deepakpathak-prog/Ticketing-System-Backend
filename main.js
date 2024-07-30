@@ -346,12 +346,15 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
         user_id: userId,
       },
     });
-
-    const customer_name = user.customer_name;
-
+    console.log("this is user",user.dataValues.role)
     if (!user) {
       return res.status(404).json({ message: "User not found" });
-    } else {
+    }
+
+    let customer_name;
+
+    if (user.dataValues.role === "4") {
+      customer_name = user.customer_name;
       const fileUploadPromises = req.files.map((file) => {
         return new Promise((resolve, reject) => {
           cloudinary.uploader
@@ -365,9 +368,9 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
             .end(file.buffer);
         });
       });
+  
       const fileUrls = await Promise.all(fileUploadPromises);
-      // console.log("fileUrls", fileUrls);
-
+  
       const Ticket = await Tickets.create({
         user_id: user.user_id,
         customer_name: customer_name,
@@ -381,13 +384,60 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
         role: user.role,
         details_images_url: fileUrls,
       });
-
+  
       res.json({ Ticket });
+    } else if (user.dataValues.role === "1") {
+      const cus_name = req.body.customer_name;
+      console.log("cusname", cus_name)
+      const user2 = await Users.findOne({
+        where: {
+          customer_name: cus_name,
+        },
+      });
+      
+      const fileUploadPromises = req.files.map((file) => {
+        return new Promise((resolve, reject) => {
+          cloudinary.uploader
+            .upload_stream({ resource_type: "auto" }, (error, result) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(result.secure_url);
+              }
+            })
+            .end(file.buffer);
+        });
+      });
+  
+      const fileUrls = await Promise.all(fileUploadPromises);
+  
+      const Ticket = await Tickets.create({
+        user_id: user2.user_id,
+        customer_name: cus_name,
+        organization_id: user2.organization_id,
+        company_legal_name: user2.company_legal_name,
+        ticket_type: req.body.ticket_type,
+        priority: req.body.priority,
+        status: "Open",
+        subject: req.body.subject,
+        details: req.body.details,
+        role: user2.role,
+        details_images_url: fileUrls,
+      });
+  
+      res.json({ Ticket });
+    } else {
+      return res.status(403).json({ message: "Unauthorized role" });
     }
+
+    
+
   } catch (error) {
     console.error("Error adding profile details:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
+
 
 app.get("/viewAllTickets", authMiddleware, async (req, res) => {
   const userId = req.userId;
@@ -522,14 +572,28 @@ app.put(
         newFileUrls = await Promise.all(fileUploadPromises);
       }
 
-      // Combine new and existing file URLs
       const combinedFileUrls = [
         ...currentTicket.details_images_url,
         ...newFileUrls,
       ];
 
+      // Fetch new company legal name if customer_name is updated
+      let newCompanyLegalName = currentTicket.company_legal_name;
+      if (req.body.customer_name && req.body.customer_name !== currentTicket.customer_name) {
+        const newUser = await Users.findOne({
+          where: {
+            customer_name: req.body.customer_name,
+          },
+        });
+        if (newUser) {
+          newCompanyLegalName = newUser.company_legal_name;
+        }
+      }
+
       // Update ticket details
       const updatedTicket = {
+        customer_name: req.body.customer_name || currentTicket.customer_name,
+        company_legal_name: newCompanyLegalName,
         ticket_type: req.body.ticket_type || currentTicket.ticket_type,
         priority: req.body.priority || currentTicket.priority,
         subject: req.body.subject || currentTicket.subject,
@@ -553,9 +617,9 @@ app.put(
         user_id: userId,
         ticket_id: ticketId,
         organization_id: user.organization_id,
-        company_legal_name: user.company_legal_name,
-        event_by: user.customer_name,
-        event_details: `${user.customer_name} updated the ticket`,
+        company_legal_name: newCompanyLegalName,
+        event_by: req.body.customer_name || currentTicket.customer_name,
+        event_details: `${req.body.customer_name || currentTicket.customer_name} updated the ticket`,
       });
 
       res.json({ ticket: updatedTicketDetails, createEvent });
@@ -565,6 +629,7 @@ app.put(
     }
   }
 );
+
 
 // app.put("/deleteTicketImage/:id", authMiddleware, async (req, res) => {
 //   const userId = req.userId;
@@ -805,6 +870,7 @@ app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
       comment_by: user.customer_name,
       comment_description: req.body.comment_description,
     });
+    console.log("addingCommentDetails",addingCommentDetails)
 
     // create event after someone comments on the ticket
     const createEvent = await Events.create({
