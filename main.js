@@ -110,34 +110,26 @@ function authMiddleware(req, res, next) {
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
-
   try {
     const user = await Users.findOne({
       where: { email: email },
     });
-
     if (!user) {
       console.log("user not found");
       return res.status(404).json({ message: "User not found" });
-
       // } else (user.password === password) {
       //   const token = jwt.sign({ userId: user.user_id }, key, {
       //     expiresIn: "1h",
       //   });
-
       //   req.session.userId = user.user_id;
-
       //   return res.json({ token, user });
       // }
     }
-
     if (user.password === password) {
       const token = jwt.sign({ userId: user.user_id }, key, {
         expiresIn: "5h",
       });
-
       req.session.userId = user.user_id;
-
       return res.json({ token, user });
     } else {
       console.log("incorrect password");
@@ -147,6 +139,8 @@ app.post("/login", async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 });
+
+
 
 app.post("/addAccountDetails", authMiddleware, async (req, res) => {
   const userId = req.userId;
@@ -1187,42 +1181,177 @@ app.post("/addTeamMember", authMiddleware, async (req, res) => {
 
 // Nirmita's Api's
 
+// app.get("/allTickets", authMiddleware, async (req, res) => {
+//   const user_id = req.userId;
+//   const { type, priority, status, company_legal_name } = req.query;
+//   let where = { user_id };
+//   if (priority) {
+//     where.priority = priority;
+//   }
+//   if (status) {
+//     where.status = status;
+//   }
+//   if (type) {
+//     where.ticket_type = type;
+//   }
+//   if (company_legal_name) {
+//     where.company_legal_name = { [Op.iLike]: `%${company_legal_name}%` };
+//   }
+//   try {
+//     console.log("Fetching tickets for user ID:", user_id);
+//     const tickets = await Tickets.findAll({ where });
+//     console.log("tickets", tickets);
+//     const response = {
+//       success: true,
+//       body: tickets,
+//       message: "Tickets fetched successfully",
+//     };
+//     res.json(response);
+//     console.log("response", response);
+//   } catch (error) {
+//     console.error("Error fetching tickets:", error);
+//     res.status(500).json({ message: "Failed to fetch tickets" });
+//   }
+// });
+
+
+// app.get("/allTickets", authMiddleware, async (req, res) => {
+//   const user_id = req.userId;  // Get the logged-in user's ID (the manager's ID)
+//   const { type, priority, status, company_legal_name } = req.query;
+
+
+//   const foundUser =      await Users.findOne({
+//     where: { user_id },
+//   });
+
+//   isManager = foundUser.role
+
+// // 
+
+// teammember = 
+
+
+
+
+//   try {
+//     console.log("Fetching tickets for manager ID:", managerId);
+
+//     // Find all user IDs associated with the managerId from the mappings table
+//     // const mappings = await Mapping.findAll({
+//     //   where: { manager_id: managerId }
+//     // });
+
+//     // Extract user_ids of team members from the mappings
+//     const teamMemberIds = mappings.map(mapping => mapping.user_id);
+
+//     // Build where clause for tickets
+//     let where = {
+//       user_id: { [Op.in]: teamMemberIds }  // Fetch tickets for users in the team
+//     };
+
+//     if (priority) {
+//       where.priority = priority;
+//     }
+//     if (status) {
+//       where.status = status;
+//     }
+//     if (type) {
+//       where.ticket_type = type;
+//     }
+//     if (company_legal_name) {
+//       where.company_legal_name = { [Op.iLike]: `%${company_legal_name}%` };
+//     }
+
+//     const tickets = await Tickets.findAll({ where });
+
+//     console.log("tickets", tickets);
+//     const response = {
+//       success: true,
+//       body: tickets,
+//       message: "Tickets fetched successfully",
+//     };
+//     res.json(response);
+//     console.log("response", response);
+//   } catch (error) {
+//     console.error("Error fetching tickets:", error);
+//     res.status(500).json({ message: "Failed to fetch tickets" });
+//   }
+// });
 app.get("/allTickets", authMiddleware, async (req, res) => {
-  const user_id = req.userId;
+  const user_id = req.userId;  
   const { type, priority, status, company_legal_name } = req.query;
-  let where = { user_id };
-  if (priority) {
-    where.priority = priority;
-  }
-  if (status) {
-    where.status = status;
-  }
-  if (type) {
-    where.ticket_type = type;
-  }
-  if (company_legal_name) {
-    where.company_legal_name = { [Op.iLike]: `%${company_legal_name}%` };
-  }
+
   try {
-    console.log("Fetching tickets for user ID:", user_id);
-    const tickets = await NewTicket.findAll({ where });
-    console.log("tickets", tickets);
+    const MANAGER_ROLE = "2";  
+
+    console.log("Logged-in user ID:", user_id);
+
+    
+    const foundUser = await Users.findOne({
+      where: { user_id }  
+    });
+
+    if (!foundUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log("Found User:", foundUser);
+
+   
+    const isManager = foundUser.role === MANAGER_ROLE;
+    console.log("User Role:", foundUser.role, "Is Manager:", isManager);
+
+    const foundTeamMembers = isManager ? await Mapping.findAll({
+      where: { manager_id: user_id }  // Ensure 'manager_id' matches the UUID type in your schema
+    }) : [];
+
+    if (!foundTeamMembers || foundTeamMembers.length === 0) {
+      return res.status(404).json({ message: "No team members found" });
+    }
+
+    console.log("Found Team Members:", foundTeamMembers);
+
+    // Extract user_ids of team members
+    const teamMemberIds = foundTeamMembers.map(member => member.user_id);
+    console.log("Team Member IDs:", teamMemberIds);
+
+    // Build where clause for tickets
+    let filter = {
+      user_id: { [Op.in]: teamMemberIds }  // Fetch tickets for users in the team
+    };
+
+    if (priority) {
+      filter.priority = priority;
+    }
+    if (status) {
+      filter.status = status;
+    }
+    if (type) {
+      filter.ticket_type = type;
+    }
+    if (company_legal_name) {
+      filter.company_legal_name = { [Op.iLike]: `%${company_legal_name}%` };
+    }
+
+    // Fetch tickets based on the where clause
+    const tickets = await Tickets.findAll({ where: filter });
+
     const response = {
       success: true,
       body: tickets,
       message: "Tickets fetched successfully",
     };
     res.json(response);
-    console.log("response", response);
   } catch (error) {
     console.error("Error fetching tickets:", error);
     res.status(500).json({ message: "Failed to fetch tickets" });
   }
 });
+
 app.get("/viewTicket/:id", authMiddleware, async (req, res) => {
   const ticketId = req.params.id;
   try {
-    const ticketDetails = await NewTicket.findAll({
+    const ticketDetails = await Tickets.findAll({
       where: {
         id: ticketId,
       },
@@ -1247,7 +1376,7 @@ app.put("/updateProfile", authMiddleware, async (req, res) => {
   const userId = req.userId;
   console.log("Received update request for userId:", userId);
   try {
-    const user = await Customer_Table.findOne({
+    const user = await Users.findOne({
       where: {
         user_id: userId,
       },
@@ -1277,7 +1406,7 @@ app.put("/AccountDetails", authMiddleware, async (req, res) => {
   const userId = req.userId;
   console.log("Received update request for userId:", userId);
   try {
-    const user = await Customer_Table.findOne({
+    const user = await Users.findOne({
       where: {
         user_id: userId,
       },
@@ -1303,9 +1432,10 @@ app.put("/AccountDetails", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
 app.get("/teamMembers", authMiddleware, async (req, res) => {
   try {
-    const customers = await Customer_Table.findAll({
+    const customers = await Users.findAll({
       attributes: ["id", "customer_name"],
     });
     res.json(customers);
