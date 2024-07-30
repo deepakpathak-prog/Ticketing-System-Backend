@@ -24,6 +24,15 @@ const Comments = require("./models/Comments");
 const Events = require("./models/Events");
 const { password } = require("pg/lib/defaults");
 const { syncModels } = require("./models/index");
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "morphine231201@gmail.com",
+    pass: "pihb zufa cqth tazd",
+  },
+});
 
 // const dummyDetails = async () => {
 //   try {
@@ -340,12 +349,15 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
         user_id: userId,
       },
     });
-
-    const customer_name = user.customer_name;
-
+    console.log("this is user",user.dataValues.role)
     if (!user) {
       return res.status(404).json({ message: "User not found" });
-    } else {
+    }
+
+    let customer_name;
+
+    if (user.dataValues.role === "4") {
+      customer_name = user.customer_name;
       const fileUploadPromises = req.files.map((file) => {
         return new Promise((resolve, reject) => {
           cloudinary.uploader
@@ -359,9 +371,9 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
             .end(file.buffer);
         });
       });
+  
       const fileUrls = await Promise.all(fileUploadPromises);
-      // console.log("fileUrls", fileUrls);
-
+  
       const Ticket = await Tickets.create({
         user_id: user.user_id,
         customer_name: customer_name,
@@ -375,13 +387,60 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
         role: user.role,
         details_images_url: fileUrls,
       });
-
+  
       res.json({ Ticket });
+    } else if (user.dataValues.role === "1") {
+      const cus_name = req.body.customer_name;
+      console.log("cusname", cus_name)
+      const user2 = await Users.findOne({
+        where: {
+          customer_name: cus_name,
+        },
+      });
+      
+      const fileUploadPromises = req.files.map((file) => {
+        return new Promise((resolve, reject) => {
+          cloudinary.uploader
+            .upload_stream({ resource_type: "auto" }, (error, result) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(result.secure_url);
+              }
+            })
+            .end(file.buffer);
+        });
+      });
+  
+      const fileUrls = await Promise.all(fileUploadPromises);
+  
+      const Ticket = await Tickets.create({
+        user_id: user2.user_id,
+        customer_name: cus_name,
+        organization_id: user2.organization_id,
+        company_legal_name: user2.company_legal_name,
+        ticket_type: req.body.ticket_type,
+        priority: req.body.priority,
+        status: "Open",
+        subject: req.body.subject,
+        details: req.body.details,
+        role: user2.role,
+        details_images_url: fileUrls,
+      });
+  
+      res.json({ Ticket });
+    } else {
+      return res.status(403).json({ message: "Unauthorized role" });
     }
+
+    
+
   } catch (error) {
     console.error("Error adding profile details:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
+
 
 app.get("/viewAllTickets", authMiddleware, async (req, res) => {
   const userId = req.userId;
@@ -516,14 +575,28 @@ app.put(
         newFileUrls = await Promise.all(fileUploadPromises);
       }
 
-      // Combine new and existing file URLs
       const combinedFileUrls = [
         ...currentTicket.details_images_url,
         ...newFileUrls,
       ];
 
+      // Fetch new company legal name if customer_name is updated
+      let newCompanyLegalName = currentTicket.company_legal_name;
+      if (req.body.customer_name && req.body.customer_name !== currentTicket.customer_name) {
+        const newUser = await Users.findOne({
+          where: {
+            customer_name: req.body.customer_name,
+          },
+        });
+        if (newUser) {
+          newCompanyLegalName = newUser.company_legal_name;
+        }
+      }
+
       // Update ticket details
       const updatedTicket = {
+        customer_name: req.body.customer_name || currentTicket.customer_name,
+        company_legal_name: newCompanyLegalName,
         ticket_type: req.body.ticket_type || currentTicket.ticket_type,
         priority: req.body.priority || currentTicket.priority,
         subject: req.body.subject || currentTicket.subject,
@@ -547,9 +620,9 @@ app.put(
         user_id: userId,
         ticket_id: ticketId,
         organization_id: user.organization_id,
-        company_legal_name: user.company_legal_name,
-        event_by: user.customer_name,
-        event_details: `${user.customer_name} updated the ticket`,
+        company_legal_name: newCompanyLegalName,
+        event_by: req.body.customer_name || currentTicket.customer_name,
+        event_details: `${req.body.customer_name || currentTicket.customer_name} updated the ticket`,
       });
 
       res.json({ ticket: updatedTicketDetails, createEvent });
@@ -559,6 +632,7 @@ app.put(
     }
   }
 );
+
 
 // app.put("/deleteTicketImage/:id", authMiddleware, async (req, res) => {
 //   const userId = req.userId;
@@ -695,7 +769,6 @@ app.get("/filtertickets", authMiddleware, async (req, res) => {
         { status: { [Op.iLike]: `%${search}%` } },
         { ticket_type: { [Op.iLike]: `%${search}%` } },
         { priority: { [Op.iLike]: `%${search}%` } },
-
       ];
     }
 
@@ -751,6 +824,18 @@ app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
   } catch (error) {}
 });
 
+app.get("/superAdminFetchComments/:id", authMiddleware, async (req, res) => {
+  const ticketId = req.params.id;
+  try {
+    const ticket = await Comments.findAll({
+      where: {
+        ticket_id: ticketId,
+      },
+    });
+    res.json({ ticket });
+  } catch (error) {}
+});
+
 app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
   const userId = req.userId;
   const ticketId = req.params.id;
@@ -799,6 +884,7 @@ app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
       comment_by: user.customer_name,
       comment_description: req.body.comment_description,
     });
+    console.log("addingCommentDetails",addingCommentDetails)
 
     // create event after someone comments on the ticket
     const createEvent = await Events.create({
@@ -832,6 +918,62 @@ app.get("/getEventDetails/:id", authMiddleware, async (req, res) => {
     console.error("cannot find events:", error);
     res.status(500).json({ error: "Failed to find events" });
   }
+});
+
+app.post("/sendResetLink", async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await Users.findOne({
+      where: { email: email },
+    });
+
+    if (user) {
+      const mailOptions = {
+        from: "morphine231201@gmail.com",
+        to: email,
+        subject: "Sending email using Node.js",
+        html: `<a href="http://localhost:3000/ResetPassword/${email}">http://localhost:3000/ResetPassword/${email}`,
+        text: "easy",
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.log(error);
+          res.status(500).json({ error: "Failed to send mail" });
+        } else {
+          console.log("Email sent: " + info.response);
+          res.json({ message: "Email sent successfully", user });
+        }
+      });
+    } else {
+      res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    console.error("Cannot send mail:", error);
+    res.status(500).json({ error: "Failed to send mail" });
+  }
+});
+
+app.post("/changePassword", async (req, res) => {
+  const { email, newPassword } = req.body;
+  console.log(email, newPassword);
+  try {
+    const user = await Users.findOne({where: {email}})
+    if (user) {
+      await Users.update(
+        { password: newPassword },
+        { where: { email: email } }
+      );
+      console.log(user)
+      res.json({user});
+    }
+    
+  } catch (error) {
+    console.error("cannot reset password:", error);
+    res.status(500).json({ error: "failed to reset password" });
+  }
+
 });
 
 // Super Admin APIs below:
