@@ -24,6 +24,15 @@ const Comments = require("./models/Comments");
 const Events = require("./models/Events");
 const { password } = require("pg/lib/defaults");
 const { syncModels } = require("./models/index");
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: "morphine231201@gmail.com",
+    pass: "pihb zufa cqth tazd",
+  },
+});
 
 // const dummyDetails = async () => {
 //   try {
@@ -766,7 +775,6 @@ app.get("/filtertickets", authMiddleware, async (req, res) => {
         { status: { [Op.iLike]: `%${search}%` } },
         { ticket_type: { [Op.iLike]: `%${search}%` } },
         { priority: { [Op.iLike]: `%${search}%` } },
-
       ];
     }
 
@@ -815,6 +823,18 @@ app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
     const ticket = await Comments.findAll({
       where: {
         user_id: userId,
+        ticket_id: ticketId,
+      },
+    });
+    res.json({ ticket });
+  } catch (error) {}
+});
+
+app.get("/superAdminFetchComments/:id", authMiddleware, async (req, res) => {
+  const ticketId = req.params.id;
+  try {
+    const ticket = await Comments.findAll({
+      where: {
         ticket_id: ticketId,
       },
     });
@@ -904,6 +924,62 @@ app.get("/getEventDetails/:id", authMiddleware, async (req, res) => {
     console.error("cannot find events:", error);
     res.status(500).json({ error: "Failed to find events" });
   }
+});
+
+app.post("/sendResetLink", async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await Users.findOne({
+      where: { email: email },
+    });
+
+    if (user) {
+      const mailOptions = {
+        from: "morphine231201@gmail.com",
+        to: email,
+        subject: "Sending email using Node.js",
+        html: `<a href="http://localhost:3000/ResetPassword/${email}">http://localhost:3000/ResetPassword/${email}`,
+        text: "easy",
+      };
+
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          console.log(error);
+          res.status(500).json({ error: "Failed to send mail" });
+        } else {
+          console.log("Email sent: " + info.response);
+          res.json({ message: "Email sent successfully", user });
+        }
+      });
+    } else {
+      res.status(404).json({ message: "User not found" });
+    }
+  } catch (error) {
+    console.error("Cannot send mail:", error);
+    res.status(500).json({ error: "Failed to send mail" });
+  }
+});
+
+app.post("/changePassword", async (req, res) => {
+  const { email, newPassword } = req.body;
+  console.log(email, newPassword);
+  try {
+    const user = await Users.findOne({where: {email}})
+    if (user) {
+      await Users.update(
+        { password: newPassword },
+        { where: { email: email } }
+      );
+      console.log(user)
+      res.json({user});
+    }
+    
+  } catch (error) {
+    console.error("cannot reset password:", error);
+    res.status(500).json({ error: "failed to reset password" });
+  }
+
 });
 
 // Super Admin APIs below:
