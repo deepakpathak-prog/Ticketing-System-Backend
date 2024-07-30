@@ -16,12 +16,12 @@ const key = process.env.SECRET_KEY;
 
 const { connect } = require("./config/database");
 
-const Users = require("./models/Users")
+const Users = require("./models/Users");
 const Roles = require("./models/Roles");
 const Mapping = require("./models/Mapping");
-const Tickets = require("./models/Tickets")
+const Tickets = require("./models/Tickets");
 const Comments = require("./models/Comments");
-const Events = require("./models/Events")
+const Events = require("./models/Events");
 const { password } = require("pg/lib/defaults");
 const { syncModels } = require("./models/index");
 
@@ -187,10 +187,12 @@ app.put(
     console.log("req", req.files);
 
     try {
-      const user = await Users.findOne({where: {
-        user_id: userId
-      }});
-  
+      const user = await Users.findOne({
+        where: {
+          user_id: userId,
+        },
+      });
+
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -254,14 +256,16 @@ app.put(
 );
 
 app.get("/getUserDetails", authMiddleware, async (req, res) => {
-  let userId = req.userId
+  let userId = req.userId;
 
   console.log(userId);
 
   try {
-    const user = await Users.findOne({where: {
-      user_id: userId
-    }});
+    const user = await Users.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -279,9 +283,11 @@ app.post("/resetPassword", authMiddleware, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
   try {
-    const user = await Users.findOne({where: {
-      user_id: userId
-    }});
+    const user = await Users.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -293,7 +299,7 @@ app.post("/resetPassword", authMiddleware, async (req, res) => {
       });
 
       res.json({ message: "Password updated successfully", updatePassword });
-    } 
+    }
   } catch (error) {
     console.error("Error resetting password:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -335,11 +341,13 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
   const userId = req.userId;
 
   try {
-    const user = await Users.findOne({where: {
-      user_id: userId
-    }});
+    const user = await Users.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
 
-    const customer_name = user.customer_name
+    const customer_name = user.customer_name;
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -385,9 +393,11 @@ app.get("/viewAllTickets", authMiddleware, async (req, res) => {
   const userId = req.userId;
 
   try {
-    const user = await Users.findOne({where: {
-      user_id: userId
-    }});
+    const user = await Users.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -411,9 +421,11 @@ app.get("/viewTicketDetails/:id", authMiddleware, async (req, res) => {
   const ticketId = req.params.id;
 
   try {
-    const user = await Users.findOne({where: {
-      user_id: userId
-    }});
+    const user = await Users.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     } else {
@@ -476,9 +488,11 @@ app.put(
     const userId = req.userId;
     const ticketId = req.params.id;
     try {
-      const user = await Users.findOne({where: {
-        user_id: userId
-      }});
+      const user = await Users.findOne({
+        where: {
+          user_id: userId,
+        },
+      });
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -541,7 +555,7 @@ app.put(
         organization_id: user.organization_id,
         company_legal_name: user.company_legal_name,
         event_by: user.customer_name,
-        event_details: `${user.customer_name} updated the ticket`
+        event_details: `${user.customer_name} updated the ticket`,
       });
 
       res.json({ ticket: updatedTicketDetails, createEvent });
@@ -619,45 +633,99 @@ app.post("/deleteTicketImage/:id", authMiddleware, async (req, res) => {
 
 app.get("/filtertickets", authMiddleware, async (req, res) => {
   const user_id = req.userId;
-  const { type, priority, status, page = 1, limit = 10, search } = req.query;
+  const user = await Users.findOne({
+    where: {
+      user_id: user_id,
+    },
+  });
+  const {
+    type,
+    priority,
+    status,
+    page = 1,
+    limit = 10,
+    search,
+    customerName,
+  } = req.query;
 
   const offset = (page - 1) * limit;
+  if (user.role === "1") {
+    let filter = {};
 
-  let filter = { user_id };
+    if (type && type !== "Type") filter.ticket_type = type;
+    if (priority && priority !== "Priority") filter.priority = priority;
+    if (status && status !== "Status") filter.status = status;
+    if (customerName && customerName != "Customer Name")
+      filter.customer_name = customerName;
 
-  if (type && type !== "Type") filter.ticket_type = type;
-  if (priority && priority !== "Priority") filter.priority = priority;
-  if (status && status !== "Status") filter.status = status;
+    if (search) {
+      filter[Op.or] = [
+        { subject: { [Op.iLike]: `%${search}%` } },
+        { status: { [Op.iLike]: `%${search}%` } },
+        { ticket_type: { [Op.iLike]: `%${search}%` } },
+        { priority: { [Op.iLike]: `%${search}%` } },
+        { customer_name: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
 
-  if (search) {
-    filter[Op.or] = [
-      { subject: { [Op.iLike]: `%${search}%` } },
-      { status: { [Op.iLike]: `%${search}%` } },
-      { ticket_type: { [Op.iLike]: `%${search}%` } },
-      { priority: { [Op.iLike]: `%${search}%` } },
-    ];
-  }
+    console.log("Filter Object:", filter);
 
-  console.log("Filter Object:", filter);
+    try {
+      const { count, rows } = await Tickets.findAndCountAll({
+        where: filter,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+      });
 
-  try {
-    const { count, rows } = await Tickets.findAndCountAll({
-      where: filter,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-    });
+      console.log("Resulting Tickets:", rows);
 
-    console.log("Resulting Tickets:", rows);
+      res.json({
+        tickets: rows,
+        totalItems: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+      });
+    } catch (error) {
+      console.error("Error fetching tickets:", error); // Log the error
+      res.status(500).json({ error: "Failed to fetch tickets" });
+    }
+  } else {
+    let filter = { user_id };
+    if (type && type !== "Type") filter.ticket_type = type;
+    if (priority && priority !== "Priority") filter.priority = priority;
+    if (status && status !== "Status") filter.status = status;
 
-    res.json({
-      tickets: rows,
-      totalItems: count,
-      totalPages: Math.ceil(count / limit),
-      currentPage: parseInt(page),
-    });
-  } catch (error) {
-    console.error("Error fetching tickets:", error); // Log the error
-    res.status(500).json({ error: "Failed to fetch tickets" });
+    if (search) {
+      filter[Op.or] = [
+        { subject: { [Op.iLike]: `%${search}%` } },
+        { status: { [Op.iLike]: `%${search}%` } },
+        { ticket_type: { [Op.iLike]: `%${search}%` } },
+        { priority: { [Op.iLike]: `%${search}%` } },
+
+      ];
+    }
+
+    console.log("Filter Object:", filter);
+
+    try {
+      const { count, rows } = await Tickets.findAndCountAll({
+        where: filter,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+      });
+
+      console.log("Resulting Tickets:", rows);
+
+      res.json({
+        tickets: rows,
+        totalItems: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+      });
+    } catch (error) {
+      console.error("Error fetching tickets:", error); // Log the error
+      res.status(500).json({ error: "Failed to fetch tickets" });
+    }
   }
 });
 
@@ -683,7 +751,7 @@ app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
       where: {
         user_id: userId,
         ticket_id: ticketId,
-      }
+      },
     });
     res.json({ ticket });
   } catch (error) {}
@@ -694,9 +762,11 @@ app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
   const ticketId = req.params.id;
 
   try {
-    const user = await Users.findOne({where: {
-      user_id: userId
-    }});
+    const user = await Users.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
     const ticketDetails = await Tickets.findByPk(ticketId);
 
     const fileUploadPromises = req.files.map((file) => {
@@ -744,9 +814,9 @@ app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
       company_legal_name: user.company_legal_name,
       event_by: user.customer_name,
       event_details: `${user.customer_name} commented `,
-    })
+    });
 
-    res.json({ user, ticketDetails, addingCommentDetails, createEvent});
+    res.json({ user, ticketDetails, addingCommentDetails, createEvent });
   } catch (error) {
     console.error("Error adding comment:", error);
     res.status(500).json({ error: "Failed to add comment" });
@@ -754,24 +824,23 @@ app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
 });
 
 app.get("/getEventDetails/:id", authMiddleware, async (req, res) => {
-  const ticketId = req.params.id; 
+  const ticketId = req.params.id;
 
   try {
     const event = await Events.findAll({
       where: {
         ticket_id: ticketId,
-      }
-    })
+      },
+    });
 
-    res.json({event});
+    res.json({ event });
   } catch (error) {
     console.error("cannot find events:", error);
     res.status(500).json({ error: "Failed to find events" });
   }
-})
+});
 
 // Super Admin APIs below:
-
 
 app.get("/SuperAdminAllTickets", authMiddleware, async (req, res) => {
   try {
@@ -782,7 +851,6 @@ app.get("/SuperAdminAllTickets", authMiddleware, async (req, res) => {
     es.status(500).json({ message: "Failed to filter tickets" });
   }
 });
-
 
 app.get("/viewAllClients", async (req, res) => {
   try {
@@ -1079,15 +1147,8 @@ app.get("/users/Organisation", authMiddleware, async (req, res) => {
   }
 });
 app.post("/addTeamMember", authMiddleware, async (req, res) => {
-  const {
-    full_name,
-    gender,
-    department,
-    position,
-    phone_number,
-    email,
-    role,
-  } = req.body;
+  const { full_name, gender, department, position, phone_number, email, role } =
+    req.body;
   try {
     const loggedInUser = await Users.findOne({
       where: { user_id: req.userId },
@@ -1096,10 +1157,10 @@ app.post("/addTeamMember", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     const organizationId = loggedInUser.organization_id;
-    let roleId = '3'; // Default role_id
+    let roleId = "3"; // Default role_id
     if (role === "Manager" || role === "Admin") {
       const roleRecord = await Roles.findOne({
-        where: { role_name: role.charAt(0).toUpperCase() + role.slice(1) } // Capitalize the first letter
+        where: { role_name: role.charAt(0).toUpperCase() + role.slice(1) }, // Capitalize the first letter
       });
       if (roleRecord) {
         roleId = roleRecord.role_id;
@@ -1124,12 +1185,11 @@ app.post("/addTeamMember", authMiddleware, async (req, res) => {
   }
 });
 
-
 // Nirmita's Api's
 
 app.get("/allTickets", authMiddleware, async (req, res) => {
   const user_id = req.userId;
-  const { type, priority, status,company_legal_name  } = req.query;
+  const { type, priority, status, company_legal_name } = req.query;
   let where = { user_id };
   if (priority) {
     where.priority = priority;
@@ -1140,8 +1200,8 @@ app.get("/allTickets", authMiddleware, async (req, res) => {
   if (type) {
     where.ticket_type = type;
   }
-  if(company_legal_name){
-    where.company_legal_name={   [Op.iLike]: `%${company_legal_name}%` };
+  if (company_legal_name) {
+    where.company_legal_name = { [Op.iLike]: `%${company_legal_name}%` };
   }
   try {
     console.log("Fetching tickets for user ID:", user_id);
@@ -1160,9 +1220,9 @@ app.get("/allTickets", authMiddleware, async (req, res) => {
   }
 });
 app.get("/viewTicket/:id", authMiddleware, async (req, res) => {
- const ticketId = req.params.id;
+  const ticketId = req.params.id;
   try {
-  const ticketDetails = await NewTicket.findAll({
+    const ticketDetails = await NewTicket.findAll({
       where: {
         id: ticketId,
       },
@@ -1173,7 +1233,7 @@ app.get("/viewTicket/:id", authMiddleware, async (req, res) => {
     console.log("tickets", ticketDetails);
     const response = {
       success: true,
-      body:ticketDetails,
+      body: ticketDetails,
       message: "Tickets fetched successfully",
     };
     res.json(response);
@@ -1183,9 +1243,9 @@ app.get("/viewTicket/:id", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch tickets" });
   }
 });
-app.put('/updateProfile',authMiddleware, async (req, res) => {
+app.put("/updateProfile", authMiddleware, async (req, res) => {
   const userId = req.userId;
-  console.log('Received update request for userId:', userId);
+  console.log("Received update request for userId:", userId);
   try {
     const user = await Customer_Table.findOne({
       where: {
@@ -1193,66 +1253,68 @@ app.put('/updateProfile',authMiddleware, async (req, res) => {
       },
     });
     if (!user) {
-      console.log('User not found');
-      return res.status(404).json({ message: 'User not found' });
+      console.log("User not found");
+      return res.status(404).json({ message: "User not found" });
     }
     await user.update({
       customer_name: req.body.customer_name,
       gender: req.body.gender,
       role: req.body.role,
-     position: req.body.position,
-      phone_number: req.body.phone_number,
-      email: req.body.email,
-    });
-    res.json({
-      updatedUser: user,
-      message: 'Profile updated successfully',
-    });
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-app.put('/AccountDetails',authMiddleware, async (req, res) => {
-  const userId = req.userId;
-  console.log('Received update request for userId:', userId);
-  try {
-    const user = await Customer_Table.findOne({
-      where: {
-        user_id: userId,
-      },
-    });
-    if (!user) {
-      console.log('User not found');
-      return res.status(404).json({ message: 'User not found' });
-    }
-    await user.update({
-      customer_name: req.body.customer_name,
-      gender: req.body.gender,
-     role: req.body.role,
       position: req.body.position,
       phone_number: req.body.phone_number,
       email: req.body.email,
     });
     res.json({
       updatedUser: user,
-      message: 'Profile updated successfully',
+      message: "Profile updated successfully",
     });
   } catch (error) {
-    console.error('Error updating profile:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error("Error updating profile:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
-app.get('/teamMembers',authMiddleware, async (req, res) => {
+app.put("/AccountDetails", authMiddleware, async (req, res) => {
+  const userId = req.userId;
+  console.log("Received update request for userId:", userId);
+  try {
+    const user = await Customer_Table.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
+    if (!user) {
+      console.log("User not found");
+      return res.status(404).json({ message: "User not found" });
+    }
+    await user.update({
+      customer_name: req.body.customer_name,
+      gender: req.body.gender,
+      role: req.body.role,
+      position: req.body.position,
+      phone_number: req.body.phone_number,
+      email: req.body.email,
+    });
+    res.json({
+      updatedUser: user,
+      message: "Profile updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+app.get("/teamMembers", authMiddleware, async (req, res) => {
   try {
     const customers = await Customer_Table.findAll({
-        attributes: ['id', 'customer_name']
+      attributes: ["id", "customer_name"],
     });
     res.json(customers);
-} catch (error) {
+  } catch (error) {
     console.error("Error fetching customer names:", error);
-    res.status(500).json({ error: "An error occurred while fetching customer names." });
-}
+    res
+      .status(500)
+      .json({ error: "An error occurred while fetching customer names." });
+  }
 });
 
 app.listen(port, () => {
