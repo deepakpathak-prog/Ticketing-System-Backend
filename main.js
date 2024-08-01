@@ -349,7 +349,7 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
         user_id: userId,
       },
     });
-    console.log("this is user",user.dataValues.role)
+    console.log("this is user", user.dataValues.role)
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -371,9 +371,9 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
             .end(file.buffer);
         });
       });
-  
+
       const fileUrls = await Promise.all(fileUploadPromises);
-  
+
       const Ticket = await Tickets.create({
         user_id: user.user_id,
         customer_name: customer_name,
@@ -387,7 +387,7 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
         role: user.role,
         details_images_url: fileUrls,
       });
-  
+
       res.json({ Ticket });
     } else if (user.dataValues.role === "1") {
       const cus_name = req.body.customer_name;
@@ -397,7 +397,7 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
           customer_name: cus_name,
         },
       });
-      
+
       const fileUploadPromises = req.files.map((file) => {
         return new Promise((resolve, reject) => {
           cloudinary.uploader
@@ -411,9 +411,9 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
             .end(file.buffer);
         });
       });
-  
+
       const fileUrls = await Promise.all(fileUploadPromises);
-  
+
       const Ticket = await Tickets.create({
         user_id: user2.user_id,
         customer_name: cus_name,
@@ -427,13 +427,13 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
         role: user2.role,
         details_images_url: fileUrls,
       });
-  
+
       res.json({ Ticket });
     } else {
       return res.status(403).json({ message: "Unauthorized role" });
     }
 
-    
+
 
   } catch (error) {
     console.error("Error adding profile details:", error);
@@ -807,7 +807,7 @@ app.get("/deleteTicket/:id", authMiddleware, async (req, res) => {
     await ticket.destroy();
 
     res.status(200).json({ message: "Ticket deleted successfully" });
-  } catch (error) {}
+  } catch (error) { }
 });
 
 app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
@@ -821,7 +821,7 @@ app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
       },
     });
     res.json({ ticket });
-  } catch (error) {}
+  } catch (error) { }
 });
 
 app.get("/superAdminFetchComments/:id", authMiddleware, async (req, res) => {
@@ -833,7 +833,7 @@ app.get("/superAdminFetchComments/:id", authMiddleware, async (req, res) => {
       },
     });
     res.json({ ticket });
-  } catch (error) {}
+  } catch (error) { }
 });
 
 app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
@@ -884,7 +884,7 @@ app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
       comment_by: user.customer_name,
       comment_description: req.body.comment_description,
     });
-    console.log("addingCommentDetails",addingCommentDetails)
+    console.log("addingCommentDetails", addingCommentDetails)
 
     // create event after someone comments on the ticket
     const createEvent = await Events.create({
@@ -959,16 +959,16 @@ app.post("/changePassword", async (req, res) => {
   const { email, newPassword } = req.body;
   console.log(email, newPassword);
   try {
-    const user = await Users.findOne({where: {email}})
+    const user = await Users.findOne({ where: { email } })
     if (user) {
       await Users.update(
         { password: newPassword },
         { where: { email: email } }
       );
       console.log(user)
-      res.json({user});
+      res.json({ user });
     }
-    
+
   } catch (error) {
     console.error("cannot reset password:", error);
     res.status(500).json({ error: "failed to reset password" });
@@ -1420,17 +1420,17 @@ app.post("/addTeamMember", authMiddleware, async (req, res) => {
 //   }
 // });
 app.get("/allTickets", authMiddleware, async (req, res) => {
-  const user_id = req.userId;  
+  const user_id = req.userId;
   const { type, priority, status, company_legal_name } = req.query;
 
   try {
-    const MANAGER_ROLE = "2";  
+    const MANAGER_ROLE = "2";
 
     console.log("Logged-in user ID:", user_id);
 
-    
+
     const foundUser = await Users.findOne({
-      where: { user_id }  
+      where: { user_id }
     });
 
     if (!foundUser) {
@@ -1439,7 +1439,7 @@ app.get("/allTickets", authMiddleware, async (req, res) => {
 
     console.log("Found User:", foundUser);
 
-   
+
     const isManager = foundUser.role === MANAGER_ROLE;
     console.log("User Role:", foundUser.role, "Is Manager:", isManager);
 
@@ -1514,6 +1514,59 @@ app.get("/viewTicket/:id", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch tickets" });
   }
 });
+
+
+app.put("/updateTicket/:id", authMiddleware, async (req, res) => {
+  const ticketId = req.params.id;
+  try {
+
+    const {
+      additionalNotes,
+
+      status,
+
+      totalHours,
+
+
+
+    } = req.body
+
+
+
+    const updatedTicket = await Tickets.update({
+      status: status
+    }, {
+      where: {
+        id: ticketId
+      }
+    })
+    console.log("updatedTicket", updatedTicket);
+    // const response = {
+    //   success: true,
+    //   body: ticketDetails,
+    //   message: "Tickets fetched successfully",
+    // };
+    res.json({updatedTicket});
+  } catch (error) {
+    console.error("Error fetching tickets:", error);
+    res.status(500).json({ message: "Failed to fetch tickets" });
+  }
+});
+
+app.get("/assignTicket/:id", authMiddleware, async (req, res) => {
+  const { ticketId } = req.params.id;
+  const { assignedTo } = req.body; // assignedTo should be customer_name
+
+  try {
+    // Update the ticket assignment in the database
+    await Tickets.update({ assignedTo }, { where: { id: ticketId } });
+    res.status(200).json({ message: 'Ticket assigned successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error assigning ticket', error });
+  }
+});
+
+
 app.put("/updateProfile", authMiddleware, async (req, res) => {
   const userId = req.userId;
   console.log("Received update request for userId:", userId);
@@ -1544,6 +1597,7 @@ app.put("/updateProfile", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
 app.put("/AccountDetails", authMiddleware, async (req, res) => {
   const userId = req.userId;
   console.log("Received update request for userId:", userId);
@@ -1586,6 +1640,114 @@ app.get("/teamMembers", authMiddleware, async (req, res) => {
     res
       .status(500)
       .json({ error: "An error occurred while fetching customer names." });
+  }
+});
+
+// Backend - Express.js route
+app.put("/updateStatus", authMiddleware, async (req, res) => {
+  const userId = req.userId; // The ID of the user making the request
+  const { status } = req.body; // New status value from the request
+
+  console.log("Received update request for userId:", userId);
+  console.log("Status to update:", status);
+
+  try {
+    // Find the user by user_id
+    const user = await Users.findOne({ where: { user_id: userId } });
+    if (!user) {
+      console.log("User not found");
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update the user's status
+    await user.update({ status });
+
+    res.json({
+      updatedUser: user,
+      message: "Status updated successfully",
+    });
+  } catch (error) {
+    console.error("Error updating status:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+app.get("/getUserAccountDetails", authMiddleware, async (req, res) => {
+  let userId = req.userId;
+
+  console.log(userId);
+
+  try {
+    const user = await Users.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    } else {
+      res.json({ user });
+    }
+  } catch (error) {
+    console.error("error fetching user", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+// TeamMember Api's
+
+app.get("/allTicketsTeamMember", authMiddleware, async (req, res) => {
+  const userId = req.userId;
+
+  try {
+    const user = await Users.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    } else {
+      const tickets = await Tickets.findAll({
+        where: {
+          organization_id: user.organization_id,
+        },
+      });
+
+      res.json({ tickets });
+    }
+  } catch (error) {
+    console.error("Error fetching tickets:", error);
+    res.status(500).json({ message: "Failed to fetch tickets" });
+  }
+});
+
+app.get("/ViewTickets/:id", authMiddleware, async (req, res) => {
+  const ticketId = req.params.id;
+  try {
+    const ticketDetails = await Tickets.findAll({
+      where: {
+        id: ticketId,
+      },
+    });
+    if (!ticketDetails || ticketDetails.length === 0) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+    console.log("tickets", ticketDetails);
+    const response = {
+      success: true,
+      body: ticketDetails,
+      message: "Tickets fetched successfully",
+    };
+    res.json(response);
+    console.log("response", response);
+  } catch (error) {
+    console.error("Error fetching tickets:", error);
+    res.status(500).json({ message: "Failed to fetch tickets" });
   }
 });
 
