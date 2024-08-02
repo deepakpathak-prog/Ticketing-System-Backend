@@ -980,7 +980,7 @@ app.get("/SuperAdminAllTickets", authMiddleware, async (req, res) => {
     res.json({ user });
     console.log(user);
   } catch (error) {
-    es.status(500).json({ message: "Failed to filter tickets" });
+    res.status(500).json({ message: "Failed to filter tickets" });
   }
 });
 
@@ -1291,7 +1291,7 @@ app.get("/users/Organisation", authMiddleware, async (req, res) => {
 });
 
 app.post("/addTeamMember", authMiddleware, async (req, res) => {
-  const { full_name, gender, department, position, phone_number, email, role } =
+  const { customer_name, gender, designation, phone_number, email, role, password } =
     req.body;
   try {
     const loggedInUser = await Users.findOne({
@@ -1301,25 +1301,27 @@ app.post("/addTeamMember", authMiddleware, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     const organizationId = loggedInUser.organization_id;
-    let roleId = "3"; // Default role_id
-    if (role === "Manager" || role === "Admin") {
-      const roleRecord = await Roles.findOne({
-        where: { role_name: role.charAt(0).toUpperCase() + role.slice(1) }, // Capitalize the first letter
-      });
-      if (roleRecord) {
-        roleId = roleRecord.role_id;
-      }
+    
+    let setRole;
+    if (role==="Admin"){
+      setRole = "1"
+    } else if (role === "Manager") {
+      setRole = "2";
+    }else{
+      setRole = "3"
     }
+
+    
     const newTeamMember = await Users.create({
-      full_name: full_name,
+      customer_name: customer_name,
       gender: gender,
       department: department,
-      // designation: position,
+      designation: designation,
       phone_number: phone_number,
       email: email,
-      password: "Test@123", // You may want to change how passwords are handled
-      role: roleId, // "manager" or "admin" role_id or default to "3"
-      organization_id: organizationId, // Associate with the same organization
+      password: password, 
+      role: setRole, 
+      organization_id: organizationId, 
       onBoarded: false,
     });
     res.status(201).json(newTeamMember);
