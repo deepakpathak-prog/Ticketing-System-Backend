@@ -1315,7 +1315,6 @@ app.post("/addTeamMember", authMiddleware, async (req, res) => {
     const newTeamMember = await Users.create({
       customer_name: customer_name,
       gender: gender,
-      department: department,
       designation: designation,
       phone_number: phone_number,
       email: email,
