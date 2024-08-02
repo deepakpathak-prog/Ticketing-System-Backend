@@ -149,8 +149,6 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
-
 app.post("/addAccountDetails", authMiddleware, async (req, res) => {
   const userId = req.userId;
 
@@ -349,7 +347,7 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
         user_id: userId,
       },
     });
-    console.log("this is user", user.dataValues.role)
+    console.log("this is user", user.dataValues.role);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -391,7 +389,7 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
       res.json({ Ticket });
     } else if (user.dataValues.role === "1") {
       const cus_name = req.body.customer_name;
-      console.log("cusname", cus_name)
+      console.log("cusname", cus_name);
       const user2 = await Users.findOne({
         where: {
           customer_name: cus_name,
@@ -432,15 +430,11 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
     } else {
       return res.status(403).json({ message: "Unauthorized role" });
     }
-
-
-
   } catch (error) {
     console.error("Error adding profile details:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
-
 
 app.get("/viewAllTickets", authMiddleware, async (req, res) => {
   const userId = req.userId;
@@ -582,7 +576,10 @@ app.put(
 
       // Fetch new company legal name if customer_name is updated
       let newCompanyLegalName = currentTicket.company_legal_name;
-      if (req.body.customer_name && req.body.customer_name !== currentTicket.customer_name) {
+      if (
+        req.body.customer_name &&
+        req.body.customer_name !== currentTicket.customer_name
+      ) {
         const newUser = await Users.findOne({
           where: {
             customer_name: req.body.customer_name,
@@ -622,7 +619,9 @@ app.put(
         organization_id: user.organization_id,
         company_legal_name: newCompanyLegalName,
         event_by: req.body.customer_name || currentTicket.customer_name,
-        event_details: `${req.body.customer_name || currentTicket.customer_name} updated the ticket`,
+        event_details: `${
+          req.body.customer_name || currentTicket.customer_name
+        } updated the ticket`,
       });
 
       res.json({ ticket: updatedTicketDetails, createEvent });
@@ -632,7 +631,6 @@ app.put(
     }
   }
 );
-
 
 // app.put("/deleteTicketImage/:id", authMiddleware, async (req, res) => {
 //   const userId = req.userId;
@@ -807,7 +805,7 @@ app.get("/deleteTicket/:id", authMiddleware, async (req, res) => {
     await ticket.destroy();
 
     res.status(200).json({ message: "Ticket deleted successfully" });
-  } catch (error) { }
+  } catch (error) {}
 });
 
 app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
@@ -821,7 +819,7 @@ app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
       },
     });
     res.json({ ticket });
-  } catch (error) { }
+  } catch (error) {}
 });
 
 app.get("/superAdminFetchComments/:id", authMiddleware, async (req, res) => {
@@ -833,7 +831,7 @@ app.get("/superAdminFetchComments/:id", authMiddleware, async (req, res) => {
       },
     });
     res.json({ ticket });
-  } catch (error) { }
+  } catch (error) {}
 });
 
 app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
@@ -884,7 +882,7 @@ app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
       comment_by: user.customer_name,
       comment_description: req.body.comment_description,
     });
-    console.log("addingCommentDetails", addingCommentDetails)
+    console.log("addingCommentDetails", addingCommentDetails);
 
     // create event after someone comments on the ticket
     const createEvent = await Events.create({
@@ -959,21 +957,19 @@ app.post("/changePassword", async (req, res) => {
   const { email, newPassword } = req.body;
   console.log(email, newPassword);
   try {
-    const user = await Users.findOne({ where: { email } })
+    const user = await Users.findOne({ where: { email } });
     if (user) {
       await Users.update(
         { password: newPassword },
         { where: { email: email } }
       );
-      console.log(user)
+      console.log(user);
       res.json({ user });
     }
-
   } catch (error) {
     console.error("cannot reset password:", error);
     res.status(500).json({ error: "failed to reset password" });
   }
-
 });
 
 // Super Admin APIs below:
@@ -1001,11 +997,13 @@ app.get("/viewAllClients", async (req, res) => {
     res.status(500).json({ message: "Failed to get client list" });
   }
 });
+
 app.post("/addCustomer", async (req, res) => {
   const {
     customer_name,
     company_legal_name,
     company_url,
+    password,
     phone_number,
     email,
     address,
@@ -1022,7 +1020,7 @@ app.post("/addCustomer", async (req, res) => {
       company_url: company_url,
       phone_number: phone_number,
       email: email,
-      password: "Test@123",
+      password: password,
       address: address,
       country: country,
       city: city,
@@ -1038,6 +1036,7 @@ app.post("/addCustomer", async (req, res) => {
     res.status(500).json({ message: "Failed to add new customer" });
   }
 });
+
 app.put("/updateCustomer", authMiddleware, async (req, res) => {
   const {
     id,
@@ -1083,6 +1082,7 @@ app.put("/updateCustomer", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Failed to update customer" });
   }
 });
+
 // app.delete('/deleteCustomer/:id', authMiddleware, async (req, res) => {
 //   const { id } = req.params;
 //   try {
@@ -1100,6 +1100,7 @@ app.put("/updateCustomer", authMiddleware, async (req, res) => {
 //     res.status(500).json({ message: "Failed to delete customer" });
 //   }
 // });
+
 app.delete("/deleteCustomer/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
   try {
@@ -1125,6 +1126,7 @@ app.delete("/deleteCustomer/:id", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Failed to delete customer" });
   }
 });
+
 app.post("/getClientTeam", async (req, res) => {
   try {
     const { organization_id } = req.body;
@@ -1143,13 +1145,14 @@ app.post("/getClientTeam", async (req, res) => {
     res.status(500).json({ message: "Failed to get client list" });
   }
 });
+
 app.post("/addClientTeamMember", async (req, res) => {
   const {
     organization_id,
     customer_name,
     gender,
     company_legal_name,
-    // company_url,
+    password,
     phone_number,
     email,
     designation,
@@ -1160,10 +1163,10 @@ app.post("/addClientTeamMember", async (req, res) => {
       customer_name: customer_name,
       gender: gender,
       company_legal_name: company_legal_name,
-      // company_url: company_url,
+      password: password,
       phone_number: phone_number,
       email: email,
-      password: "Test@123",
+      // password: "Test@123",
       designation: designation,
       role: "5",
       onBoarded: "false",
@@ -1176,6 +1179,7 @@ app.post("/addClientTeamMember", async (req, res) => {
     res.status(500).json({ message: "Failed to add team member" });
   }
 });
+
 app.delete("/deleteClientTeamMember/:id", async (req, res) => {
   const user_id = req.params.id;
   try {
@@ -1192,6 +1196,7 @@ app.delete("/deleteClientTeamMember/:id", async (req, res) => {
     res.status(500).json({ message: "Failed to delete team member" });
   }
 });
+
 app.get("/superadmin/details", authMiddleware, async (req, res) => {
   const userId = req.userId;
   console.log("super admin userId", userId);
@@ -1209,6 +1214,7 @@ app.get("/superadmin/details", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Failed to fetch super admin details" });
   }
 });
+
 app.put("/updateSuperAdmin", authMiddleware, async (req, res) => {
   const userId = req.userId;
   console.log("Super Admin being updated, user_id:", userId);
@@ -1252,6 +1258,7 @@ app.put("/updateSuperAdmin", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Failed to update super admin" });
   }
 });
+
 app.get("/users/Organisation", authMiddleware, async (req, res) => {
   const userId = req.userId;
   console.log("this is the superadmins user id", userId);
@@ -1282,6 +1289,7 @@ app.get("/users/Organisation", authMiddleware, async (req, res) => {
       .json({ message: "Failed to fetch users for the organization" });
   }
 });
+
 app.post("/addTeamMember", authMiddleware, async (req, res) => {
   const { full_name, gender, department, position, phone_number, email, role } =
     req.body;
@@ -1306,7 +1314,7 @@ app.post("/addTeamMember", authMiddleware, async (req, res) => {
       full_name: full_name,
       gender: gender,
       department: department,
-      designation: position,
+      // designation: position,
       phone_number: phone_number,
       email: email,
       password: "Test@123", // You may want to change how passwords are handled
@@ -1356,11 +1364,9 @@ app.post("/addTeamMember", authMiddleware, async (req, res) => {
 //   }
 // });
 
-
 // app.get("/allTickets", authMiddleware, async (req, res) => {
 //   const user_id = req.userId;  // Get the logged-in user's ID (the manager's ID)
 //   const { type, priority, status, company_legal_name } = req.query;
-
 
 //   const foundUser =      await Users.findOne({
 //     where: { user_id },
@@ -1368,12 +1374,9 @@ app.post("/addTeamMember", authMiddleware, async (req, res) => {
 
 //   isManager = foundUser.role
 
-// // 
+// //
 
-// teammember = 
-
-
-
+// teammember =
 
 //   try {
 //     console.log("Fetching tickets for manager ID:", managerId);
@@ -1428,9 +1431,8 @@ app.get("/allTickets", authMiddleware, async (req, res) => {
 
     console.log("Logged-in user ID:", user_id);
 
-
     const foundUser = await Users.findOne({
-      where: { user_id }
+      where: { user_id },
     });
 
     if (!foundUser) {
@@ -1439,13 +1441,14 @@ app.get("/allTickets", authMiddleware, async (req, res) => {
 
     console.log("Found User:", foundUser);
 
-
     const isManager = foundUser.role === MANAGER_ROLE;
     console.log("User Role:", foundUser.role, "Is Manager:", isManager);
 
-    const foundTeamMembers = isManager ? await Mapping.findAll({
-      where: { manager_id: user_id }  // Ensure 'manager_id' matches the UUID type in your schema
-    }) : [];
+    const foundTeamMembers = isManager
+      ? await Mapping.findAll({
+          where: { manager_id: user_id }, // Ensure 'manager_id' matches the UUID type in your schema
+        })
+      : [];
 
     if (!foundTeamMembers || foundTeamMembers.length === 0) {
       return res.status(404).json({ message: "No team members found" });
@@ -1454,12 +1457,12 @@ app.get("/allTickets", authMiddleware, async (req, res) => {
     console.log("Found Team Members:", foundTeamMembers);
 
     // Extract user_ids of team members
-    const teamMemberIds = foundTeamMembers.map(member => member.user_id);
+    const teamMemberIds = foundTeamMembers.map((member) => member.user_id);
     console.log("Team Member IDs:", teamMemberIds);
 
     // Build where clause for tickets
     let filter = {
-      user_id: { [Op.in]: teamMemberIds }  // Fetch tickets for users in the team
+      user_id: { [Op.in]: teamMemberIds }, // Fetch tickets for users in the team
     };
 
     if (priority) {
@@ -1515,38 +1518,32 @@ app.get("/viewTicket/:id", authMiddleware, async (req, res) => {
   }
 });
 
-
 app.put("/updateTicket/:id", authMiddleware, async (req, res) => {
   const ticketId = req.params.id;
   try {
-
     const {
       additionalNotes,
 
       status,
 
       totalHours,
+    } = req.body;
 
-
-
-    } = req.body
-
-
-
-    const updatedTicket = await Tickets.update({
-      status: status
-    }, {
-      where: {
-        id: ticketId
+    const updatedTicket = await Tickets.update(
+      {
+        status: status,
+        additional_notes: additionalNotes,
+        hours_logged: totalHours,
+      },
+      {
+        where: {
+          id: ticketId,
+        },
       }
-    })
+    );
     console.log("updatedTicket", updatedTicket);
-    // const response = {
-    //   success: true,
-    //   body: ticketDetails,
-    //   message: "Tickets fetched successfully",
-    // };
-    res.json({updatedTicket});
+
+    res.json({ updatedTicket });
   } catch (error) {
     console.error("Error fetching tickets:", error);
     res.status(500).json({ message: "Failed to fetch tickets" });
@@ -1560,12 +1557,11 @@ app.get("/assignTicket/:id", authMiddleware, async (req, res) => {
   try {
     // Update the ticket assignment in the database
     await Tickets.update({ assignedTo }, { where: { id: ticketId } });
-    res.status(200).json({ message: 'Ticket assigned successfully' });
+    res.status(200).json({ message: "Ticket assigned successfully" });
   } catch (error) {
-    res.status(500).json({ message: 'Error assigning ticket', error });
+    res.status(500).json({ message: "Error assigning ticket", error });
   }
 });
-
 
 app.put("/updateProfile", authMiddleware, async (req, res) => {
   const userId = req.userId;
@@ -1636,30 +1632,27 @@ app.get("/teamMembers", authMiddleware, async (req, res) => {
     });
     res.json(customers);
   } catch (error) {
-    console.error("Error fetching customer names:", error);
+    console.error("Error fetching team member names:", error);
     res
       .status(500)
-      .json({ error: "An error occurred while fetching customer names." });
+      .json({ error: "An error occurred while fetching team member names." });
   }
 });
 
-// Backend - Express.js route
 app.put("/updateStatus", authMiddleware, async (req, res) => {
-  const userId = req.userId; // The ID of the user making the request
-  const { status } = req.body; // New status value from the request
+  const userId = req.userId;
+  const { status } = req.body;
 
   console.log("Received update request for userId:", userId);
   console.log("Status to update:", status);
 
   try {
-    // Find the user by user_id
     const user = await Users.findOne({ where: { user_id: userId } });
     if (!user) {
       console.log("User not found");
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Update the user's status
     await user.update({ status });
 
     res.json({
@@ -1671,7 +1664,6 @@ app.put("/updateStatus", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
-
 
 app.get("/getUserAccountDetails", authMiddleware, async (req, res) => {
   let userId = req.userId;
@@ -1695,7 +1687,6 @@ app.get("/getUserAccountDetails", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
-
 
 // TeamMember Api's
 

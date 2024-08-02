@@ -54,5 +54,17 @@ const Tickets = sequelize.define("Tickets", {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  assigned_to: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  hours_logged: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  additional_notes: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 });
 module.exports = Tickets;
