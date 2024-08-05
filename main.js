@@ -1058,7 +1058,8 @@ app.get("/viewAllClients", async (req, res) => {
 
 
 
-app.put("/updateCustomer", authMiddleware, async (req, res) => {
+
+app.put("/updateCustomer", authMiddleware, upload.single('profileImage'), async (req, res) => {
   const {
     id,
     customer_name,
@@ -1067,42 +1068,107 @@ app.put("/updateCustomer", authMiddleware, async (req, res) => {
     phone_number,
     email,
     address,
-    city,
-    country,
     postal_code,
+    country,
+    city,
     about_company,
     work_domain,
   } = req.body;
+
+  let profileUrl = null;
+
   try {
-    const updatedCustomer = await Users.update(
-      {
-        customer_name,
-        company_legal_name,
-        company_url,
-        phone_number,
-        email,
-        address,
-        city,
-        country,
-        postal_code,
-        about_company,
-        work_domain,
-      },
-      {
-        where: {
-          id,
-        },
-      }
-    );
-    if (updatedCustomer[0] === 0) {
+    // Handle profile image upload
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream({ resource_type: "auto" }, (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result.secure_url);
+          }
+        }).end(req.file.buffer);
+      });
+
+      profileUrl = result;
+    }
+
+    // Update customer details
+    const [updatedRows] = await Users.update({
+      customer_name,
+      company_legal_name,
+      company_url,
+      phone_number,
+      email,
+      address,
+      postal_code,
+      country,
+      city,
+      about_company,
+      work_domain,
+      profile_url: profileUrl, // Add profile URL if it's updated
+    }, {
+      where: { id },
+      returning: true,
+    });
+
+    if (updatedRows === 0) {
       return res.status(404).json({ message: "Customer not found" });
     }
+
     res.status(200).json({ message: "Customer updated successfully" });
   } catch (error) {
-    console.error("Error updating customer", error);
+    console.error("Error updating customer:", error);
     res.status(500).json({ message: "Failed to update customer" });
   }
 });
+
+
+// app.put("/updateCustomer", authMiddleware, async (req, res) => {
+//   const {
+//     id,
+//     customer_name,
+//     company_legal_name,
+//     company_url,
+//     phone_number,
+//     email,
+//     address,
+//     city,
+//     country,
+//     postal_code,
+//     about_company,
+//     work_domain,
+//   } = req.body;
+//   try {
+//     const updatedCustomer = await Users.update(
+//       {
+//         customer_name,
+//         company_legal_name,
+//         company_url,
+//         phone_number,
+//         email,
+//         address,
+//         city,
+//         country,
+//         postal_code,
+//         about_company,
+//         work_domain,
+//       },
+//       {
+//         where: {
+//           id,
+//         },
+//       }
+//     );
+//     if (updatedCustomer[0] === 0) {
+//       return res.status(404).json({ message: "Customer not found" });
+//     }
+//     res.status(200).json({ message: "Customer updated successfully" });
+//   } catch (error) {
+//     console.error("Error updating customer", error);
+//     res.status(500).json({ message: "Failed to update customer" });
+//   }
+// });
 
 // app.delete('/deleteCustomer/:id', authMiddleware, async (req, res) => {
 //   const { id } = req.params;
@@ -1167,7 +1233,41 @@ app.post("/getClientTeam", async (req, res) => {
   }
 });
 
-app.post("/addClientTeamMember", async (req, res) => {
+// app.post("/addClientTeamMember", async (req, res) => {
+//   const {
+//     organization_id,
+//     customer_name,
+//     gender,
+//     company_legal_name,
+//     password,
+//     phone_number,
+//     email,
+//     designation,
+//   } = req.body;
+//   try {
+//     const newTeamMember = await Users.create({
+//       organization_id: organization_id,
+//       customer_name: customer_name,
+//       gender: gender,
+//       company_legal_name: company_legal_name,
+//       password: password,
+//       phone_number: phone_number,
+//       email: email,
+//       // password: "Test@123",
+//       designation: designation,
+//       role: "5",
+//       onBoarded: "false",
+//     });
+//     res
+//       .status(201)
+//       .json({ message: "Team member added successfully", newTeamMember });
+//   } catch (error) {
+//     console.error("Error adding new team member", error);
+//     res.status(500).json({ message: "Failed to add team member" });
+//   }
+// });
+
+app.post("/addClientTeamMember", upload.single('profileImage'), async (req, res) => {
   const {
     organization_id,
     customer_name,
@@ -1178,23 +1278,41 @@ app.post("/addClientTeamMember", async (req, res) => {
     email,
     designation,
   } = req.body;
+
+  let profileUrl = null;
+
   try {
+    // Handle profile image upload
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream({ resource_type: "auto" }, (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result.secure_url);
+          }
+        }).end(req.file.buffer);
+      });
+
+      profileUrl = result;
+    }
+
+    // Create new team member
     const newTeamMember = await Users.create({
-      organization_id: organization_id,
-      customer_name: customer_name,
-      gender: gender,
-      company_legal_name: company_legal_name,
-      password: password,
-      phone_number: phone_number,
-      email: email,
-      // password: "Test@123",
-      designation: designation,
+      organization_id,
+      customer_name,
+      gender,
+      company_legal_name,
+      password,
+      phone_number,
+      email,
+      designation,
+      profile_url: profileUrl, // Add profile URL if provided
       role: "5",
-      onBoarded: "false",
+      onBoarded: false,
     });
-    res
-      .status(201)
-      .json({ message: "Team member added successfully", newTeamMember });
+
+    res.status(201).json({ message: "Team member added successfully", newTeamMember });
   } catch (error) {
     console.error("Error adding new team member", error);
     res.status(500).json({ message: "Failed to add team member" });
@@ -1236,9 +1354,54 @@ app.get("/superadmin/details", authMiddleware, async (req, res) => {
   }
 });
 
-app.put("/updateSuperAdmin", authMiddleware, async (req, res) => {
+// app.put("/updateSuperAdmin", authMiddleware, async (req, res) => {
+//   const userId = req.userId;
+//   console.log("Super Admin being updated, user_id:", userId);
+//   const {
+//     customer_name,
+//     company_legal_name,
+//     company_url,
+//     phone_number,
+//     email,
+//     address,
+//     city,
+//     country,
+//     postal_code,
+//     about_company,
+//     work_domain,
+//   } = req.body;
+//   try {
+//     await Users.update(
+//       {
+//         customer_name,
+//         company_legal_name,
+//         company_url,
+//         phone_number,
+//         email,
+//         address,
+//         city,
+//         country,
+//         postal_code,
+//         about_company,
+//         work_domain,
+//       },
+//       {
+//         where: {
+//           user_id: userId,
+//         },
+//       }
+//     );
+//     res.status(200).json({ message: "Super Admin updated successfully" });
+//   } catch (error) {
+//     console.error("Error updating super admin:", error);
+//     res.status(500).json({ message: "Failed to update super admin" });
+//   }
+// });
+
+app.put("/updateSuperAdmin", authMiddleware, upload.any(), async (req, res) => {
   const userId = req.userId;
   console.log("Super Admin being updated, user_id:", userId);
+
   const {
     customer_name,
     company_legal_name,
@@ -1252,7 +1415,26 @@ app.put("/updateSuperAdmin", authMiddleware, async (req, res) => {
     about_company,
     work_domain,
   } = req.body;
+
+  let profileUrl = null;
+
   try {
+    // Handle file upload if a new file is provided
+    if (req.files && req.files[0]) {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream({ resource_type: "auto" }, (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result.secure_url);
+          }
+        }).end(req.files[0].buffer);
+      });
+
+      profileUrl = result;
+    }
+
+    // Update the user record
     await Users.update(
       {
         customer_name,
@@ -1266,6 +1448,7 @@ app.put("/updateSuperAdmin", authMiddleware, async (req, res) => {
         postal_code,
         about_company,
         work_domain,
+        profile_url: profileUrl || null, // Update profile_url if a new one is provided
       },
       {
         where: {
@@ -1273,6 +1456,7 @@ app.put("/updateSuperAdmin", authMiddleware, async (req, res) => {
         },
       }
     );
+
     res.status(200).json({ message: "Super Admin updated successfully" });
   } catch (error) {
     console.error("Error updating super admin:", error);
@@ -1311,45 +1495,108 @@ app.get("/users/Organisation", authMiddleware, async (req, res) => {
   }
 });
 
-app.post("/addTeamMember", authMiddleware, async (req, res) => {
-  const { customer_name, gender, designation, phone_number, email, role, password } =
-    req.body;
+
+
+app.post("/addTeamMember", authMiddleware, upload.single('profileImage'), async (req, res) => {
+  const { customer_name, gender, designation, phone_number, email, role, password } = req.body;
+
+  let profileUrl = null;
+
   try {
     const loggedInUser = await Users.findOne({
       where: { user_id: req.userId },
     });
+    
     if (!loggedInUser) {
       return res.status(404).json({ message: "User not found" });
     }
+
     const organizationId = loggedInUser.organization_id;
     
     let setRole;
-    if (role==="Admin"){
-      setRole = "1"
+    if (role === "Admin") {
+      setRole = "1";
     } else if (role === "Manager") {
       setRole = "2";
-    }else{
-      setRole = "3"
+    } else {
+      setRole = "3";
     }
 
-    
+    // Handle profile image upload
+    if (req.file) {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream({ resource_type: "auto" }, (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result.secure_url);
+          }
+        }).end(req.file.buffer);
+      });
+
+      profileUrl = result;
+    }
+
     const newTeamMember = await Users.create({
       customer_name: customer_name,
       gender: gender,
       designation: designation,
       phone_number: phone_number,
       email: email,
-      password: password, 
-      role: setRole, 
-      organization_id: organizationId, 
+      password: password,
+      role: setRole,
+      organization_id: organizationId,
+      profile_url: profileUrl, // Add the profile URL to the database
       onBoarded: false,
     });
+
     res.status(201).json(newTeamMember);
   } catch (error) {
     console.error("Error adding new team member", error);
     res.status(500).json({ message: "Failed to add new team member" });
   }
 });
+
+
+// app.post("/addTeamMember", authMiddleware, async (req, res) => {
+//   const { customer_name, gender, designation, phone_number, email, role, password } =
+//     req.body;
+//   try {
+//     const loggedInUser = await Users.findOne({
+//       where: { user_id: req.userId },
+//     });
+//     if (!loggedInUser) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+//     const organizationId = loggedInUser.organization_id;
+    
+//     let setRole;
+//     if (role==="Admin"){
+//       setRole = "1"
+//     } else if (role === "Manager") {
+//       setRole = "2";
+//     }else{
+//       setRole = "3"
+//     }
+
+    
+//     const newTeamMember = await Users.create({
+//       customer_name: customer_name,
+//       gender: gender,
+//       designation: designation,
+//       phone_number: phone_number,
+//       email: email,
+//       password: password, 
+//       role: setRole, 
+//       organization_id: organizationId, 
+//       onBoarded: false,
+//     });
+//     res.status(201).json(newTeamMember);
+//   } catch (error) {
+//     console.error("Error adding new team member", error);
+//     res.status(500).json({ message: "Failed to add new team member" });
+//   }
+// });
 
 // Nirmita's Api's
 
