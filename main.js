@@ -975,6 +975,63 @@ app.post("/changePassword", async (req, res) => {
 
 // Super Admin APIs below:
 
+app.post("/addCustomer", upload.any(), async (req, res) => {
+  const {
+    customer_name,
+    company_legal_name,
+    company_url,
+    password,
+    phone_number,
+    email,
+    address,
+    city,
+    country,
+    postal_code,
+    about_company,
+    work_domain,
+  } = req.body;
+
+  let profileUrl = null;
+  try {
+
+    if (req.files && req.files[0]) {
+      const result = await new Promise((resolve, reject) => {
+        cloudinary.uploader.upload_stream({ resource_type: "auto" }, (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result.secure_url);
+          }
+        }).end(req.files[0].buffer);
+      });
+
+      profileUrl = result;
+    }
+
+    const newCustomer = await Users.create({
+      customer_name: customer_name,
+      company_legal_name: company_legal_name,
+      company_url: company_url,
+      phone_number: phone_number,
+      email: email,
+      password: password,
+      address: address,
+      country: country,
+      city: city,
+      postal_code: postal_code,
+      about_company: about_company,
+      work_domain: work_domain,
+      profile_url: profileUrl,
+      role: "4",
+      onBoarded: false,
+    });
+    res.status(201).json(newCustomer);
+  } catch (error) {
+    console.error("Error adding new customer", error);
+    res.status(500).json({ message: "Failed to add new customer" });
+  }
+});
+
 app.get("/SuperAdminAllTickets", authMiddleware, async (req, res) => {
   try {
     const user = await Tickets.findAll();
