@@ -1969,12 +1969,16 @@ app.get("/allTicketsTeamMember", authMiddleware, async (req, res) => {
       },
     });
 
+    const customer_name = user.customer_name
+    console.log(customer_name);
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     } else {
       const tickets = await Tickets.findAll({
         where: {
-          organization_id: user.organization_id,
+
+          assigned_to: customer_name,
         },
       });
 
