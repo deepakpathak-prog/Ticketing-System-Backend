@@ -371,6 +371,7 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
       });
 
       const fileUrls = await Promise.all(fileUploadPromises);
+      const setStatus = "Open";
 
       const Ticket = await Tickets.create({
         user_id: user.user_id,
@@ -379,7 +380,7 @@ app.post("/addTickets", authMiddleware, upload.any(), async (req, res) => {
         company_legal_name: user.company_legal_name,
         ticket_type: req.body.ticket_type,
         priority: req.body.priority,
-        status: "Open",
+        status: setStatus,
         subject: req.body.subject,
         details: req.body.details,
         role: user.role,
@@ -998,44 +999,7 @@ app.get("/viewAllClients", async (req, res) => {
   }
 });
 
-app.post("/addCustomer", async (req, res) => {
-  const {
-    customer_name,
-    company_legal_name,
-    company_url,
-    password,
-    phone_number,
-    email,
-    address,
-    city,
-    country,
-    postal_code,
-    about_company,
-    work_domain,
-  } = req.body;
-  try {
-    const newCustomer = await Users.create({
-      customer_name: customer_name,
-      company_legal_name: company_legal_name,
-      company_url: company_url,
-      phone_number: phone_number,
-      email: email,
-      password: password,
-      address: address,
-      country: country,
-      city: city,
-      postal_code: postal_code,
-      about_company: about_company,
-      work_domain: work_domain,
-      role: "4",
-      onBoarded: false,
-    });
-    res.status(201).json(newCustomer);
-  } catch (error) {
-    console.error("Error adding new customer", error);
-    res.status(500).json({ message: "Failed to add new customer" });
-  }
-});
+
 
 app.put("/updateCustomer", authMiddleware, async (req, res) => {
   const {
@@ -1524,10 +1488,9 @@ app.put("/updateTicket/:id", authMiddleware, async (req, res) => {
   try {
     const {
       additionalNotes,
-
       status,
-
       totalHours,
+      assignedTo,
     } = req.body;
 
     const updatedTicket = await Tickets.update(
@@ -1535,6 +1498,7 @@ app.put("/updateTicket/:id", authMiddleware, async (req, res) => {
         status: status,
         additional_notes: additionalNotes,
         hours_logged: totalHours,
+        assigned_to: assignedTo,
       },
       {
         where: {
