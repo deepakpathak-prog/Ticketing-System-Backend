@@ -815,7 +815,6 @@ app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
   try {
     const ticket = await Comments.findAll({
       where: {
-        user_id: userId,
         ticket_id: ticketId,
       },
     });
