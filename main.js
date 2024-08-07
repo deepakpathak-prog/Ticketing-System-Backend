@@ -1512,6 +1512,11 @@ app.post("/addTeamMember", authMiddleware, upload.single('profileImage'), async 
     }
 
     const organizationId = loggedInUser.organization_id;
+    const company_legal_name = loggedInUser.company_legal_name;
+    const company_url = loggedInUser.company_url;
+    const about_company = loggedInUser.about_company;
+    const work_domain = loggedInUser.work_domain;
+
     
     let setRole;
     if (role === "Admin") {
@@ -1546,7 +1551,11 @@ app.post("/addTeamMember", authMiddleware, upload.single('profileImage'), async 
       password: password,
       role: setRole,
       organization_id: organizationId,
-      profile_url: profileUrl, // Add the profile URL to the database
+      company_legal_name: company_legal_name,
+      company_url: company_url,
+      about_company: about_company,
+      work_domain: work_domain,
+      profile_url: profileUrl, 
       onBoarded: false,
     });
 
