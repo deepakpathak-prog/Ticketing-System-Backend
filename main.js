@@ -11,6 +11,8 @@ const upload = multer({ storage });
 const bcrypt = require("bcrypt");
 const { Op, where } = require("sequelize");
 require("dotenv").config();
+const ejs = require("ejs");
+const path = require("path");
 
 const key = process.env.SECRET_KEY;
 
@@ -927,11 +929,17 @@ app.post("/sendResetLink", async (req, res) => {
     });
 
     if (user) {
+
+      const htmlContent = await ejs.renderFile(
+        path.join(__dirname, "views", "resetPasswordemail.ejs"),
+        { email: email }
+      );
+
       const mailOptions = {
         from: "morphine231201@gmail.com",
         to: email,
-        subject: "Sending email using Node.js",
-        html: `<a href="http://localhost:3000/ResetPassword/${email}">http://localhost:3000/ResetPassword/${email}`,
+        subject: "Reset password link",
+        html: htmlContent,
         text: "easy",
       };
 
