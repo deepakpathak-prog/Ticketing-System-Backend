@@ -980,6 +980,24 @@ app.post("/changePassword", async (req, res) => {
   }
 });
 
+app.get("/notOldPass", authMiddleware, async(req, res) => {
+  const userId = req.userId;
+
+  try {
+    const user = await Users.findOne({
+      where: {
+        user_id: userId,
+      },
+    });
+    if (user) {
+      res.json({ user });
+    }
+  } catch (error) {
+    
+  }
+})
+
+
 // Super Admin APIs below:
 
 app.post("/addCustomer", upload.any(), async (req, res) => {
