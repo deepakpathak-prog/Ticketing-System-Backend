@@ -622,9 +622,8 @@ app.put(
         organization_id: user.organization_id,
         company_legal_name: newCompanyLegalName,
         event_by: req.body.customer_name || currentTicket.customer_name,
-        event_details: `${
-          req.body.customer_name || currentTicket.customer_name
-        } updated the ticket`,
+        event_details: `${req.body.customer_name || currentTicket.customer_name
+          } updated the ticket`,
       });
 
       res.json({ ticket: updatedTicketDetails, createEvent });
@@ -808,7 +807,7 @@ app.get("/deleteTicket/:id", authMiddleware, async (req, res) => {
     await ticket.destroy();
 
     res.status(200).json({ message: "Ticket deleted successfully" });
-  } catch (error) {}
+  } catch (error) { }
 });
 
 app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
@@ -821,7 +820,7 @@ app.get("/fetchComments/:id", authMiddleware, async (req, res) => {
       },
     });
     res.json({ ticket });
-  } catch (error) {}
+  } catch (error) { }
 });
 
 app.get("/superAdminFetchComments/:id", authMiddleware, async (req, res) => {
@@ -833,7 +832,7 @@ app.get("/superAdminFetchComments/:id", authMiddleware, async (req, res) => {
       },
     });
     res.json({ ticket });
-  } catch (error) {}
+  } catch (error) { }
 });
 
 app.post("/addComment/:id", authMiddleware, upload.any(), async (req, res) => {
@@ -1531,7 +1530,7 @@ app.post("/addTeamMember", authMiddleware, upload.single('profileImage'), async 
     const loggedInUser = await Users.findOne({
       where: { user_id: req.userId },
     });
-    
+
     if (!loggedInUser) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -1603,7 +1602,7 @@ app.post("/addTeamMember", authMiddleware, upload.single('profileImage'), async 
 //       return res.status(404).json({ message: "User not found" });
 //     }
 //     const organizationId = loggedInUser.organization_id;
-    
+
 //     let setRole;
 //     if (role==="Admin"){
 //       setRole = "1"
@@ -1613,7 +1612,7 @@ app.post("/addTeamMember", authMiddleware, upload.single('profileImage'), async 
 //       setRole = "3"
 //     }
 
-    
+
 //     const newTeamMember = await Users.create({
 //       customer_name: customer_name,
 //       gender: gender,
@@ -1749,8 +1748,8 @@ app.get("/allTickets", authMiddleware, async (req, res) => {
 
     const foundTeamMembers = isManager
       ? await Mapping.findAll({
-          where: { manager_id: user_id }, // Ensure 'manager_id' matches the UUID type in your schema
-        })
+        where: { manager_id: user_id }, // Ensure 'manager_id' matches the UUID type in your schema
+      })
       : [];
 
     if (!foundTeamMembers || foundTeamMembers.length === 0) {
@@ -2011,7 +2010,6 @@ app.get("/allTicketsTeamMember", authMiddleware, async (req, res) => {
     } else {
       const tickets = await Tickets.findAll({
         where: {
-
           assigned_to: customer_name,
         },
       });
@@ -2046,6 +2044,101 @@ app.get("/ViewTickets/:id", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("Error fetching tickets:", error);
     res.status(500).json({ message: "Failed to fetch tickets" });
+  }
+});
+
+app.get("/filterticketsmember", authMiddleware, async (req, res) => {
+  const user_id = req.userId;
+  const user = await Users.findOne({
+    where: {
+      user_id: user_id,
+    },
+  });
+  const {
+    type,
+    priority,
+    status,
+    page = 1,
+    limit = 10,
+    search,
+    customerName,
+  } = req.query;
+
+  const offset = (page - 1) * limit;
+  if (user.role === "3") {
+    let filter = {};
+
+    if (type && type !== "Type") filter.ticket_type = type;
+    if (priority && priority !== "Priority") filter.priority = priority;
+    if (status && status !== "Status") filter.status = status;
+    
+
+    if (search) {
+      filter[Op.or] = [
+        { subject: { [Op.iLike]: `%${search}%` } },
+        { status: { [Op.iLike]: `%${search}%` } },
+        { ticket_type: { [Op.iLike]: `%${search}%` } },
+        { priority: { [Op.iLike]: `%${search}%` } },
+        { customer_name: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+    console.log("Filter Object:", filter);
+
+    try {
+      const { count, rows } = await Tickets.findAndCountAll({
+        where: filter,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+      });
+
+      console.log("Resulting Tickets:", rows);
+
+      res.json({
+        tickets: rows,
+        totalItems: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+      });
+    } catch (error) {
+      console.error("Error fetching tickets:", error); // Log the error
+      res.status(500).json({ error: "Failed to fetch tickets" });
+    }
+  } else {
+    let filter = { user_id };
+    if (type && type !== "Type") filter.ticket_type = type;
+    if (priority && priority !== "Priority") filter.priority = priority;
+    if (status && status !== "Status") filter.status = status;
+
+    if (search) {
+      filter[Op.or] = [
+        { subject: { [Op.iLike]: `%${search}%` } },
+        { status: { [Op.iLike]: `%${search}%` } },
+        { ticket_type: { [Op.iLike]: `%${search}%` } },
+        { priority: { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    console.log("Filter Object:", filter);
+
+    try {
+      const { count, rows } = await Tickets.findAndCountAll({
+        where: filter,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+      });
+
+      console.log("Resulting Tickets:", rows);
+
+      res.json({
+        tickets: rows,
+        totalItems: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: parseInt(page),
+      });
+    } catch (error) {
+      console.error("Error fetching tickets:", error); // Log the error
+      res.status(500).json({ error: "Failed to fetch tickets" });
+    }
   }
 });
 
