@@ -124,6 +124,7 @@ app.post("/login", async (req, res) => {
   try {
     const user = await Users.findOne({
       where: { email: email },
+      paranoid: false,
     });
     if (!user) {
       console.log("user not found");
@@ -136,6 +137,12 @@ app.post("/login", async (req, res) => {
       //   return res.json({ token, user });
       // }
     }
+
+    if (user.deletedAt) {
+      console.log("User is soft deleted");
+      return res.status(403).json({ message: "User is deactivated" });
+    }
+
     if (user.password === password) {
       const token = jwt.sign({ userId: user.user_id }, key, {
         expiresIn: "5h",
@@ -149,6 +156,30 @@ app.post("/login", async (req, res) => {
     console.error("Error logging in:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
+});
+
+app.post("/removeMember", async (req, res) => {
+  const { userId } = req.body;
+  console.log("Received userId:", userId);
+  try {
+    const user = await Users.findOne({
+      where: {
+        id: userId, 
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await user.destroy();
+
+    res.json({ message: "User successfully removed" });
+  } catch (error) {
+    console.error("Error Removing team member:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+
 });
 
 app.post("/addAccountDetails", authMiddleware, async (req, res) => {
@@ -1492,16 +1523,16 @@ app.get("/users/Organisation", authMiddleware, async (req, res) => {
   const userId = req.userId;
   console.log("this is the superadmins user id", userId);
   try {
-    // Get the superadmin's details
+
     const superAdmin = await Users.findOne({
       where: { user_id: userId, role: "1" },
     });
     if (!superAdmin) {
       return res.status(404).json({ message: "Super admin not found" });
     }
-    // Retrieve the organization ID
+
     const organizationId = superAdmin.organization_id;
-    // Fetch all users with the same organization ID
+
     const users = await Users.findAll({
       where: { organization_id: organizationId },
     });

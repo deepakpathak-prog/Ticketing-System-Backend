@@ -1,6 +1,7 @@
 const { Sequelize, DataTypes } = require("sequelize");
 const { sequelize } = require('../config/database');
 const { v4: uuidv4 } = require('uuid');
+
 const Users = sequelize.define("Users", {
   id: {
     allowNull: true,
@@ -87,5 +88,9 @@ const Users = sequelize.define("Users", {
     type: DataTypes.STRING,
     allowNull: true,
   },
+}, {
+  paranoid: true, // Enables soft delete by adding a deletedAt column
+  timestamps: true, // Ensure createdAt and updatedAt are added
 });
+
 module.exports = Users;
